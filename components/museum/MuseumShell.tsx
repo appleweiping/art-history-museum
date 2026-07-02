@@ -16,6 +16,7 @@ declare global {
   interface Window {
     __museum?: {
       ready: boolean;
+      artworkIds: number[];
       inspectPainting: (id: number) => void;
     };
   }
@@ -57,10 +58,12 @@ export default function MuseumShell({ data }: { data: MuseumData }) {
       useMuseumStore.getState().setReady(true);
       window.__museum = {
         ready: true,
+        artworkIds: data.artworks.map((a) => a.id),
         inspectPainting: (id: number) => useMuseumStore.getState().setInspected(id),
       };
     }, 250);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, doorOpen]);
 
   const requestLock = () => {

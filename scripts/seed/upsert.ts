@@ -1,4 +1,4 @@
-import { eq, inArray, notInArray, and } from "drizzle-orm";
+import { and, eq, notInArray } from "drizzle-orm";
 import type { PeriodResult } from "./validate";
 
 /**

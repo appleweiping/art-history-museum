@@ -77,7 +77,6 @@ export function useCamera(
       sel.on(".zoom", null);
       zoomRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [svgRef, width, height]);
 
   return useMemo<CameraApi>(() => {

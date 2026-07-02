@@ -4,40 +4,60 @@ import path from "node:path";
 import { fetch as undiciFetch, ProxyAgent } from "undici";
 
 // Node's built-in fetch ignores HTTP(S)_PROXY; on networks where Wikimedia is
-// only reachable through a local proxy we must route explicitly.
+// only reachable through a local proxy we must route explicitly. The proxy's
+// pooled connections can go stale mid-run, so we rebuild the agent after
+// consecutive connection failures.
 const PROXY_URL = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || "";
-const dispatcher = PROXY_URL ? new ProxyAgent(PROXY_URL) : undefined;
+let dispatcher = PROXY_URL ? new ProxyAgent(PROXY_URL) : undefined;
+let consecutiveNetErrors = 0;
+
+function reviveDispatcher() {
+  consecutiveNetErrors++;
+  if (PROXY_URL && consecutiveNetErrors >= 2) {
+    try {
+      dispatcher?.close();
+    } catch {
+      // ignore
+    }
+    dispatcher = new ProxyAgent(PROXY_URL);
+    consecutiveNetErrors = 0;
+  }
+}
 
 const CACHE_DIR = path.join(process.cwd(), ".cache", "wiki");
 const USER_AGENT =
   "ArtHistoryMuseum-Seed/1.0 (https://art-history-museum.vercel.app; BensonHalefdo@theplate.com)";
 const GAP_MS = 120;
-const MAX_RETRIES = 5;
+const MAX_RETRIES = 8;
 
 export const stats = { network: 0, cached: 0 };
 
 const refresh = process.argv.includes("--refresh");
 
-let chain: Promise<unknown> = Promise.resolve();
+const CONCURRENCY = 3;
+let active = 0;
+const waiters: Array<() => void> = [];
 let lastRequestAt = 0;
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-/** Serialize all live API calls with a polite gap between them. */
-function enqueue<T>(fn: () => Promise<T>): Promise<T> {
-  const next = chain.then(async () => {
-    const wait = lastRequestAt + GAP_MS - Date.now();
-    if (wait > 0) await sleep(wait);
-    try {
-      return await fn();
-    } finally {
-      lastRequestAt = Date.now();
-    }
-  });
-  chain = next.catch(() => {});
-  return next;
+/** Small polite pool: at most CONCURRENCY in-flight, GAP_MS between starts. */
+async function enqueue<T>(fn: () => Promise<T>): Promise<T> {
+  if (active >= CONCURRENCY) {
+    await new Promise<void>((resolve) => waiters.push(resolve));
+  }
+  active++;
+  const wait = lastRequestAt + GAP_MS - Date.now();
+  if (wait > 0) await sleep(wait);
+  lastRequestAt = Date.now();
+  try {
+    return await fn();
+  } finally {
+    active--;
+    waiters.shift()?.();
+  }
 }
 
 function cachePath(url: string) {
@@ -45,7 +65,7 @@ function cachePath(url: string) {
   return path.join(CACHE_DIR, `${sha}.json`);
 }
 
-async function fetchWithRetry(url: string): Promise<Response> {
+async function fetchWithRetry(url: string) {
   let lastError: unknown;
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
@@ -57,15 +77,17 @@ async function fetchWithRetry(url: string): Promise<Response> {
         const retryAfter = Number(res.headers.get("retry-after"));
         const backoff = Number.isFinite(retryAfter) && retryAfter > 0
           ? retryAfter * 1000
-          : 1000 * 2 ** attempt;
+          : Math.min(15_000, 1000 * 2 ** attempt);
         await sleep(backoff);
         lastError = new Error(`HTTP ${res.status} for ${url}`);
         continue;
       }
+      consecutiveNetErrors = 0;
       return res;
     } catch (err) {
       lastError = err;
-      await sleep(1000 * 2 ** attempt);
+      reviveDispatcher();
+      await sleep(Math.min(15_000, 1000 * 2 ** attempt));
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));

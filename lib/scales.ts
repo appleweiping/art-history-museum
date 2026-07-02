@@ -1,6 +1,6 @@
 import { scaleLinear } from "d3-scale";
 import type { TimelineArtist, TimelinePeriod } from "./types";
-import { PX_PER_YEAR, WORLD_H, WORLD_W, YEAR_MAX, YEAR_MIN } from "./constants";
+import { WORLD_H, WORLD_W, YEAR_MAX, YEAR_MIN } from "./constants";
 
 export const yearScale = scaleLinear()
   .domain([YEAR_MIN, YEAR_MAX])

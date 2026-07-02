@@ -141,12 +141,25 @@ export async function buildArtist(
 ): Promise<ArtistResult> {
   const reasons: string[] = [];
 
-  // 1. Biography (verbatim REST summary lead).
+  // 1. Biography (verbatim Wikipedia text). REST summary only returns the
+  // FIRST paragraph, which for many artists is a single sentence — so fall
+  // back to the article's full lead section when it is richer.
   const summary = await restSummary(config.wikipediaTitle);
-  if (!summary || !summary.extract || summary.extract.length < 200) {
-    return { config, ok: false, reasons: ["missing/short en-wiki summary"] };
+  if (!summary || !summary.extract) {
+    return { config, ok: false, reasons: ["missing en-wiki summary"] };
   }
   const normalizedTitle = summary.title;
+  const artistArticle = await plainTextArticle(normalizedTitle);
+  let bio = summary.extract;
+  if (bio.length < 350 && artistArticle) {
+    const lead = splitSections(artistArticle.extract).find(
+      (s) => s.heading === "__lead__",
+    )?.text;
+    if (lead && lead.length > bio.length) bio = trimStory(lead, 900);
+  }
+  if (bio.length < 80) {
+    return { config, ok: false, reasons: ["missing/short en-wiki summary"] };
+  }
 
   // 2. Dates from Wikidata (fallbacks keep the timeline deterministic).
   const qid = await wikibaseItemId(normalizedTitle);
@@ -183,12 +196,11 @@ export async function buildArtist(
   }
 
   // Artist-article sections fuel fallback facts for category-sourced works.
-  const artistArticle = await plainTextArticle(normalizedTitle);
   const artistSections = artistArticle ? splitSections(artistArticle.extract) : [];
   const artistFacts = artistArticle
     ? pickFunFacts(artistSections, artistArticle.title, artistArticle.revId, 2)
     : [];
-  const bioFallbackStory = splitSentences(summary.extract).slice(0, 3).join(" ");
+  const bioFallbackStory = splitSentences(bio).slice(0, 3).join(" ");
 
   const candidates: Candidate[] = [];
   const usedFiles = new Set<string>([portrait.file]);
@@ -220,9 +232,16 @@ export async function buildArtist(
     usedFiles.add(img.file);
 
     const full = await plainTextArticle(ws.title);
+    const fullSections = full ? splitSections(full.extract) : [];
     const funFacts = full
-      ? pickFunFacts(splitSections(full.extract), full.title, full.revId, 4)
+      ? pickFunFacts(fullSections, full.title, full.revId, 4)
       : [];
+    // prefer the article's full lead when the REST first paragraph is thin
+    let story = trimStory(ws.extract);
+    const workLead = fullSections.find((s) => s.heading === "__lead__")?.text;
+    if (story.length < 300 && workLead && workLead.length > story.length) {
+      story = trimStory(workLead);
+    }
     const year =
       yearFromString(ws.description) ??
       yearFromString(splitSentences(ws.extract).slice(0, 2).join(" ")) ??
@@ -233,7 +252,7 @@ export async function buildArtist(
       title: ws.title.replace(/\s+\([^)]*\)$/, ""),
       year,
       yearText: year != null ? String(year) : null,
-      story: trimStory(ws.extract),
+      story,
       storySourceTitle: ws.title,
       storySourceRevId: full?.revId ?? null,
       funFacts,
@@ -341,7 +360,7 @@ export async function buildArtist(
       deathYear,
       activeFrom,
       activeTo,
-      bio: summary.extract,
+      bio,
       wikipediaTitle: normalizedTitle,
       wikipediaUrl: summary.content_urls?.desktop?.page ?? pageUrl(normalizedTitle),
       wikidataId: qid,
@@ -372,7 +391,17 @@ export async function buildPeriod(
   const ranked = [...config.artists].sort((a, b) => a.rank - b.rank);
   for (const artistConfig of ranked) {
     if (kept >= maxArtists) break;
-    const result = await buildArtist(artistConfig, config, takenSlugs, kept);
+    let result: ArtistResult;
+    try {
+      result = await buildArtist(artistConfig, config, takenSlugs, kept);
+    } catch (err) {
+      // one flaky artist (network burp, malformed page) must not kill the run
+      result = {
+        config: artistConfig,
+        ok: false,
+        reasons: [`crashed: ${err instanceof Error ? err.message : String(err)}`],
+      };
+    }
     artists.push(result);
     if (result.ok) kept++;
     const label = result.ok
