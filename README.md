@@ -1,5 +1,7 @@
 # Musée — An Interactive Atlas of Art History
 
+**Live: https://art-history-museum-nine.vercel.app**
+
 A browser-based, interactive 3D art museum. The entry point is a **zoomable
 night-sky timeline** of art history: fifteen periods glow as nebulae along a
 real-date axis; zooming in resolves each period's artists as stars placed by
