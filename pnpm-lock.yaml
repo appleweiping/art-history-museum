@@ -29,6 +29,9 @@ importers:
       d3-scale:
         specifier: ^4.0.2
         version: 4.0.2
+      d3-selection:
+        specifier: ^3.0.0
+        version: 3.0.0
       d3-zoom:
         specifier: ^3.0.0
         version: 3.0.0
@@ -41,6 +44,9 @@ importers:
       next:
         specifier: 15.5.20
         version: 15.5.20(@playwright/test@1.61.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      postprocessing:
+        specifier: ^6.39.2
+        version: 6.39.2(three@0.185.1)
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -69,6 +75,9 @@ importers:
       '@types/d3-scale':
         specifier: ^4.0.9
         version: 4.0.9
+      '@types/d3-selection':
+        specifier: ^3.0.11
+        version: 3.0.11
       '@types/d3-zoom':
         specifier: ^3.0.8
         version: 3.0.8
@@ -102,6 +111,9 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+      undici:
+        specifier: ^8.5.0
+        version: 8.5.0
       vercel:
         specifier: ^54.18.7
         version: 54.18.7(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
@@ -4087,6 +4099,10 @@ packages:
   undici@7.28.0:
     resolution: {integrity: sha512-cRZYrTDwWznlnRiPjggAGxZXanty6M8RV1ff8Wm4LWXBp7/IG8v5DnOm74DtUBp9OONpK75YlPnIjQqX0dBDtA==}
     engines: {node: '>=20.18.1'}
+
+  undici@8.5.0:
+    resolution: {integrity: sha512-xamtWoB1EshgjpmlXd7GGm2VfdDtw1+rD8uhry8pSNW3If6S8E0m2T2+orSKeZXEn/aPJMviCpDBA65WJt8zhg==}
+    engines: {node: '>=22.19.0'}
 
   universalify@2.0.1:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
@@ -8117,6 +8133,8 @@ snapshots:
   undici@6.27.0: {}
 
   undici@7.28.0: {}
+
+  undici@8.5.0: {}
 
   universalify@2.0.1: {}
 
