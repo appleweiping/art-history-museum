@@ -12,6 +12,11 @@
 
 # testing
 /coverage
+/qa-artifacts
+/test-results
+
+# seed cache (Wikipedia/Commons API responses)
+/.cache
 
 # next.js
 /.next/
