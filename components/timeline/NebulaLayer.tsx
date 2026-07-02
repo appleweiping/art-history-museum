@@ -104,7 +104,7 @@ export default function NebulaLayer({ nebulae, stars, onNebulaClick }: Props) {
                 rx={n.rx * 1.45}
                 ry={n.ry * 1.5}
                 fill={`url(#neb-${n.period.slug})`}
-                opacity={0.28}
+                opacity={0.38}
                 style={{ mixBlendMode: "screen" }}
               />
               <ellipse
@@ -113,7 +113,7 @@ export default function NebulaLayer({ nebulae, stars, onNebulaClick }: Props) {
                 rx={n.rx}
                 ry={n.ry}
                 fill={`url(#neb-${n.period.slug})`}
-                opacity={0.55}
+                opacity={0.68}
                 style={{ mixBlendMode: "screen" }}
               />
               <ellipse

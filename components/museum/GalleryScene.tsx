@@ -35,7 +35,14 @@ export default function GalleryScene({ data, walkable, quality }: Props) {
 
       {layout.paintings.map((placement, i) => (
         <group key={placement.artwork.id}>
-          <PaintingFrame placement={placement} light={layout.lights[i]} gilt={gilt} />
+          <PaintingFrame
+            placement={placement}
+            light={layout.lights[i]}
+            gilt={gilt}
+            // shadow maps eat fragment texture units (MAX_TEXTURE_IMAGE_UNITS
+            // is 16 on many GPUs) — cap shadow-casting lights at 6
+            castShadow={i < 6}
+          />
           <CeilingFixture light={layout.lights[i]} />
         </group>
       ))}

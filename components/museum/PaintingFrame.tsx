@@ -85,10 +85,13 @@ export default function PaintingFrame({
   placement,
   light,
   gilt,
+  castShadow,
 }: {
   placement: PaintingPlacement;
   light: LightPlacement;
   gilt: boolean;
+  /** capped scene-wide: each shadow map costs a texture unit in every shader */
+  castShadow: boolean;
 }) {
   const { artwork, position, rotationY, width, height } = placement;
   const spotRef = useRef<THREE.SpotLight>(null);
@@ -153,7 +156,7 @@ export default function PaintingFrame({
         distance={9}
         intensity={30}
         color="#fff3e0"
-        castShadow
+        castShadow={castShadow}
         shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0002}
         shadow-normalBias={0.03}

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TimelinePeriod } from "@/lib/types";
-import { layoutNebulae, layoutStars, periodBounds } from "@/lib/scales";
+import { assignLabelRows, layoutNebulae, layoutStars, periodBounds } from "@/lib/scales";
+import { WORLD_H, WORLD_W } from "@/lib/constants";
 import { useTimelineStore } from "@/stores/timelineStore";
 import { useCamera } from "./useCamera";
 import StarfieldBackground from "./StarfieldBackground";
@@ -35,6 +36,11 @@ export default function TimelineCanvas({ periods }: { periods: TimelinePeriod[] 
     () => new Map(stars.map((s) => [s.artist.slug, s])),
     [stars],
   );
+  const labelRows = useMemo(() => {
+    if (size.w === 0) return new Map<string, number>();
+    const kFit = Math.min(size.w / (WORLD_W * 1.06), size.h / (WORLD_H * 1.06));
+    return assignLabelRows(nebulae, kFit);
+  }, [nebulae, size.w, size.h]);
 
   const camera = useCamera(svgRef, size.w, size.h);
   const selectedArtist = useTimelineStore((s) => s.selectedArtist);
@@ -153,7 +159,12 @@ export default function TimelineCanvas({ periods }: { periods: TimelinePeriod[] 
           <g ref={worldRef}>
             <NebulaLayer nebulae={nebulae} stars={stars} onNebulaClick={flyToPeriod} />
           </g>
-          <StarLayer stars={stars} nebulae={nebulae} onStarClick={onStarClick} />
+          <StarLayer
+            stars={stars}
+            nebulae={nebulae}
+            labelRows={labelRows}
+            onStarClick={onStarClick}
+          />
         </svg>
       )}
       <YearRuler />

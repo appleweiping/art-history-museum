@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useProgress } from "@react-three/drei";
-import gsap from "gsap";
 import type { MuseumData } from "@/lib/types";
 import { useMuseumStore } from "@/lib/museum/store";
 import InstructionsOverlay from "./InstructionsOverlay";
@@ -43,17 +42,11 @@ export default function MuseumShell({ data }: { data: MuseumData }) {
     store.setReady(false);
   }, []);
 
-  // door-fade: black veil lifts once everything is hung
+  // door-fade: black veil lifts once everything is hung. CSS transition, not
+  // GSAP — rAF is throttled in hidden tabs and would freeze the fade there.
   useEffect(() => {
     if (!loaded || doorOpen) return;
     const t = setTimeout(() => {
-      if (fadeRef.current) {
-        gsap.to(fadeRef.current, {
-          autoAlpha: 0,
-          duration: 1.1,
-          ease: "power2.inOut",
-        });
-      }
       setDoorOpen(true);
       useMuseumStore.getState().setReady(true);
       window.__museum = {
@@ -119,7 +112,8 @@ export default function MuseumShell({ data }: { data: MuseumData }) {
       {/* door-fade veil */}
       <div
         ref={fadeRef}
-        className="pointer-events-none absolute inset-0 z-50 bg-black"
+        className="pointer-events-none absolute inset-0 z-50 bg-black transition-opacity duration-[1200ms] ease-in-out"
+        style={{ opacity: doorOpen ? 0 : 1 }}
         aria-hidden
       >
         <div className="flex h-full items-center justify-center">

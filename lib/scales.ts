@@ -56,9 +56,50 @@ export function layoutNebulae(periods: TimelinePeriod[]): NebulaNode[] {
       cx,
       cy: p.laneY + laneDrift(cx),
       rx: Math.max(180, ((x1 - x0) / 2) * 1.15),
-      ry: 130,
+      ry: 150,
     };
   });
+}
+
+/** Band-A display name (drop "& …" suffixes that would never fit). */
+export function shortPeriodName(name: string): string {
+  return name.split("&")[0].trim();
+}
+
+/**
+ * Greedy row assignment for galaxy-view period labels so the crowded modern
+ * end of the axis fans out vertically instead of overlapping. Computed once
+ * at the fit-all zoom; larger k only increases horizontal spacing.
+ */
+export function assignLabelRows(
+  nebulae: NebulaNode[],
+  kFit: number,
+  maxRows = 5,
+): Map<string, number> {
+  const sorted = [...nebulae].sort((a, b) => a.cx - b.cx);
+  const rowEnds: number[] = [];
+  const map = new Map<string, number>();
+  for (const n of sorted) {
+    const w = shortPeriodName(n.period.name).length * 16 + 48; // ≈ px at 22px small-caps
+    const x0 = n.cx * kFit - w / 2;
+    let row = rowEnds.findIndex((end) => end <= x0);
+    if (row === -1) {
+      if (rowEnds.length < maxRows) {
+        row = rowEnds.length;
+        rowEnds.push(-Infinity);
+      } else {
+        row = rowEnds.indexOf(Math.min(...rowEnds));
+      }
+    }
+    rowEnds[row] = n.cx * kFit + w / 2;
+    map.set(n.period.slug, row);
+  }
+  // center rows around 0: offset = (row - (rows-1)/2) * spacing
+  const used = Math.max(1, rowEnds.length);
+  for (const [slug, row] of map) {
+    map.set(slug, (row - (used - 1) / 2) * 46);
+  }
+  return map;
 }
 
 /** Star positions: x = active midpoint, y = lane + deterministic jitter, then a greedy de-overlap pass. */

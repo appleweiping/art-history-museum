@@ -4,13 +4,15 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import type { NebulaNode, StarNode } from "@/lib/scales";
-import { smoothstep } from "@/lib/scales";
+import { shortPeriodName, smoothstep } from "@/lib/scales";
 import { LOD } from "@/lib/constants";
 import { useTimelineStore, type Focus } from "@/stores/timelineStore";
 
 interface Props {
   stars: StarNode[];
   nebulae: NebulaNode[];
+  /** screen-space vertical fan offsets for galaxy-view labels, by period slug */
+  labelRows: Map<string, number>;
   onStarClick: (slug: string) => void;
 }
 
@@ -31,7 +33,7 @@ function dates(a: StarNode["artist"]): string {
  * size and razor sharp — positions are re-projected imperatively on every
  * zoom tick, bypassing React entirely.
  */
-export default function StarLayer({ stars, nebulae, onStarClick }: Props) {
+export default function StarLayer({ stars, nebulae, labelRows, onStarClick }: Props) {
   const rootRef = useRef<SVGGElement>(null);
   const starRefs = useRef(new Map<string, SVGGElement>());
   const labelRefs = useRef(new Map<string, SVGGElement>());
@@ -141,10 +143,11 @@ export default function StarLayer({ stars, nebulae, onStarClick }: Props) {
           <text
             data-big
             textAnchor="middle"
+            y={labelRows.get(n.period.slug) ?? 0}
             className="fill-[#e8e3d5] font-serif"
-            style={{ fontSize: 30, letterSpacing: "0.18em" }}
+            style={{ fontSize: 22, letterSpacing: "0.2em" }}
           >
-            {n.period.name.toUpperCase()}
+            {shortPeriodName(n.period.name).toUpperCase()}
           </text>
           <text
             data-small
