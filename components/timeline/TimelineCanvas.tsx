@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TimelinePeriod } from "@/lib/types";
-import { assignLabelRows, layoutNebulae, layoutStars, periodBounds } from "@/lib/scales";
-import { WORLD_H, WORLD_W } from "@/lib/constants";
+import { layoutNebulae, layoutStars, periodBounds } from "@/lib/scales";
 import { useTimelineStore } from "@/stores/timelineStore";
 import { useCamera } from "./useCamera";
 import StarfieldBackground from "./StarfieldBackground";
@@ -36,12 +35,6 @@ export default function TimelineCanvas({ periods }: { periods: TimelinePeriod[] 
     () => new Map(stars.map((s) => [s.artist.slug, s])),
     [stars],
   );
-  const labelRows = useMemo(() => {
-    if (size.w === 0) return new Map<string, number>();
-    const kFit = Math.min(size.w / (WORLD_W * 1.06), size.h / (WORLD_H * 1.06));
-    return assignLabelRows(nebulae, kFit);
-  }, [nebulae, size.w, size.h]);
-
   const camera = useCamera(svgRef, size.w, size.h);
   const selectedArtist = useTimelineStore((s) => s.selectedArtist);
 
@@ -162,7 +155,7 @@ export default function TimelineCanvas({ periods }: { periods: TimelinePeriod[] 
           <StarLayer
             stars={stars}
             nebulae={nebulae}
-            labelRows={labelRows}
+            viewport={size}
             onStarClick={onStarClick}
           />
         </svg>
@@ -175,12 +168,13 @@ export default function TimelineCanvas({ periods }: { periods: TimelinePeriod[] 
       />
       <div className="pointer-events-none fixed right-5 top-5 z-20 text-right font-serif">
         <p className="text-[15px] tracking-[0.34em] text-[#e8e3d5]/85">MUSÉE</p>
-        <p className="mt-0.5 text-[10px] tracking-[0.22em] text-[#8a8470]">
+        <p className="mt-0.5 hidden text-[10px] tracking-[0.22em] text-[#8a8470] sm:block">
           AN ATLAS OF ART HISTORY
         </p>
       </div>
-      <p className="pointer-events-none fixed bottom-[68px] left-1/2 z-20 -translate-x-1/2 text-[11px] tracking-[0.2em] text-[#6b6555]">
-        SCROLL TO DIVE · DRAG TO DRIFT · CLICK A STAR
+      <p className="pointer-events-none fixed bottom-[68px] left-1/2 z-20 -translate-x-1/2 whitespace-nowrap text-[11px] tracking-[0.2em] text-[#6b6555]">
+        <span className="hidden sm:inline">SCROLL TO DIVE · DRAG TO DRIFT · CLICK A STAR</span>
+        <span className="sm:hidden">PINCH TO DIVE · DRAG · TAP A STAR</span>
       </p>
       {selectedStar && (
         <ArtistCard

@@ -11,7 +11,8 @@
     "seed": "tsx --env-file=.env.local scripts/seed/index.ts",
     "snapshot": "tsx --env-file=.env.local scripts/export-snapshot.ts",
     "db:push": "drizzle-kit push",
-    "qa": "playwright test"
+    "qa": "playwright test",
+    "test": "tsx --test lib/*.test.ts"
   },
   "engines": {
     "node": "22.x"

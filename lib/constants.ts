@@ -1,12 +1,29 @@
 /** World coordinate system for the constellation timeline. */
-export const YEAR_MIN = 1000;
-export const YEAR_MAX = 2030;
 export const WORLD_W = 8000;
 export const WORLD_H = 1000;
-export const PX_PER_YEAR = WORLD_W / (YEAR_MAX - YEAR_MIN);
+
+/**
+ * The year axis is piecewise linear. A linear axis gave 1200–1750 (four
+ * movements) almost two thirds of the sky and squeezed the ten movements
+ * after 1750 into the last quarter, where their labels piled on top of each
+ * other. Each stretch below gets width roughly in proportion to how many
+ * movements it holds; the ruler shows the changing scale.
+ */
+export const YEAR_STOPS = [1150, 1450, 1650, 1750, 1850, 1900, 1960, 2030];
+export const X_STOPS = [0, 0.14, 0.26, 0.36, 0.52, 0.64, 0.84, 1].map((f) => f * WORLD_W);
+export const YEAR_MIN = YEAR_STOPS[0];
+export const YEAR_MAX = YEAR_STOPS[YEAR_STOPS.length - 1];
 
 export const K_MIN = 0.15;
 export const K_MAX = 20;
+/**
+ * The timeline opens with every century in view if that needs a zoom of at
+ * least K_FIT_MIN (screens about 850 px wide and up). On narrower screens the
+ * whole sky would shrink to a thin strip, so it opens at K_START_NARROW on
+ * the earliest centuries instead and you drag to drift.
+ */
+export const K_FIT_MIN = 0.1;
+export const K_START_NARROW = 0.15;
 
 /** LOD thresholds (zoom scale k). */
 export const LOD = {

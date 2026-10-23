@@ -12,6 +12,7 @@ import {
 import { interpolateZoom } from "d3-interpolate";
 import gsap from "gsap";
 import { K_MAX, K_MIN, LOD, WORLD_H, WORLD_W } from "@/lib/constants";
+import { initialView } from "@/lib/scales";
 import { useTimelineStore, type CameraTransform } from "@/stores/timelineStore";
 
 export interface CameraApi {
@@ -40,8 +41,8 @@ export function useCamera(
     const svg = svgRef.current;
     if (!svg || width === 0 || height === 0) return;
 
-    const fitK = Math.min(width / (WORLD_W * 1.06), height / (WORLD_H * 1.06));
-    const kMin = Math.min(K_MIN, fitK * 0.9);
+    const start = initialView(width, height);
+    const kMin = Math.min(K_MIN, start.fitK * 0.9);
 
     const behavior = zoom<SVGSVGElement, unknown>()
       .scaleExtent([kMin, K_MAX])
@@ -66,10 +67,8 @@ export function useCamera(
     sel.call(behavior);
     sel.on("dblclick.zoom", null);
 
-    // initial fit-all with 6% padding
-    const t0 = zoomIdentity
-      .translate(width / 2 - (WORLD_W / 2) * fitK, height / 2 - (WORLD_H / 2) * fitK)
-      .scale(fitK);
+    // fit-all with 6% padding, or the left edge at a readable scale on narrow screens
+    const t0 = zoomIdentity.translate(start.x, start.y).scale(start.k);
     sel.call(behavior.transform, t0);
 
     return () => {
