@@ -87,6 +87,8 @@ export default function StarLayer({ stars, nebulae, viewport, onStarClick }: Pro
   const smallRefs = useRef(new Map<string, SVGTextElement>());
   const leaderRefs = useRef(new Map<string, SVGLineElement>());
   const slots = useRef(new Map<string, LabelSlot>());
+  /** measured width of each artist's name label, in px */
+  const nameWidths = useRef(new Map<string, number>());
   const focus = useTimelineStore((s) => s.focus);
   const focusRef = useRef(focus);
   focusRef.current = focus;
@@ -100,6 +102,10 @@ export default function StarLayer({ stars, nebulae, viewport, onStarClick }: Pro
     let cancelled = false;
     const pack = () => {
       if (cancelled) return;
+      for (const [slug, g] of starRefs.current) {
+        const name = g.querySelector<SVGTextElement>("[data-name]");
+        if (name) nameWidths.current.set(slug, name.getBBox().width + 6);
+      }
       const start = initialView(viewport.w, viewport.h);
       const boxes: LabelBox[] = [];
       const measured = new Map<string, { w: number; smallW: number }>();
@@ -154,21 +160,42 @@ export default function StarLayer({ stars, nebulae, viewport, onStarClick }: Pro
       const dateOp = smoothstep(LOD.dateLabelIn[0], LOD.dateLabelIn[1], k);
       const bigOp = 1 - smoothstep(LOD.starIn[0], LOD.starIn[1], k);
 
-      for (const s of stars) {
+      const corners = cornerUi(vw);
+      // artist names win over period labels: their boxes are taken first
+      const nameBoxes: Rect[] = [];
+      // brighter (focused) stars claim their name space first
+      const byDim = [...stars].sort(
+        (a, b) =>
+          dimFor(focusRef.current, b.periodSlug, b.artist.slug) -
+          dimFor(focusRef.current, a.periodSlug, a.artist.slug),
+      );
+      for (const s of byDim) {
         const g = starRefs.current.get(s.artist.slug);
         if (!g) continue;
         const dim = dimFor(focusRef.current, s.periodSlug, s.artist.slug);
-        g.setAttribute(
-          "transform",
-          `translate(${t.x + s.x * k},${t.y + s.y * k})`,
-        );
+        const px = t.x + s.x * k;
+        const py = t.y + s.y * k;
+        g.setAttribute("transform", `translate(${px},${py})`);
         const op = starOp * dim;
         g.setAttribute("opacity", String(op));
         g.style.pointerEvents = op < 0.1 ? "none" : "auto";
+        const w = nameWidths.current.get(s.artist.slug) ?? 0;
+        const box = {
+          x0: px - w / 2,
+          x1: px + w / 2,
+          y0: py + 12,
+          y1: py + (dateOp > 0.3 ? 43 : 28),
+        };
+        // hide names that would sit under the title or the filter button, or
+        // touch a name that is already shown; zooming in brings them back
+        const clear =
+          !corners.some((r) => overlaps(r, box)) &&
+          !(nameOp * op > 0.3 && nameBoxes.some((r) => overlaps(r, box, 2)));
+        if (clear && nameOp * op > 0.3) nameBoxes.push(box);
         const name = g.querySelector<SVGTextElement>("[data-name]");
-        if (name) name.setAttribute("opacity", String(nameOp));
+        if (name) name.setAttribute("opacity", String(clear ? nameOp : 0));
         const date = g.querySelector<SVGTextElement>("[data-dates]");
-        if (date) date.setAttribute("opacity", String(dateOp));
+        if (date) date.setAttribute("opacity", String(clear ? dateOp : 0));
       }
 
       // labels that were given a slot at the opening view get first claim
@@ -177,8 +204,8 @@ export default function StarLayer({ stars, nebulae, viewport, onStarClick }: Pro
         const pb = slots.current.get(b.period.slug)?.dy == null ? 1 : 0;
         return pa - pb || a.cx - b.cx;
       });
-      const bigTaken: Rect[] = cornerUi(vw);
-      const smallTaken: Rect[] = cornerUi(vw);
+      const bigTaken: Rect[] = [...corners];
+      const smallTaken: Rect[] = [...corners, ...nameBoxes];
       for (const n of order) {
         const slug = n.period.slug;
         const big = bigRefs.current.get(slug);
