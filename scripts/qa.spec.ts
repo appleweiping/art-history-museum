@@ -175,3 +175,57 @@ test("6. painting inspect opens with title, story and attribution (?qa=1)", asyn
   await page.screenshot({ path: "qa-artifacts/06-inspect.png" });
   expect(consoleErrors, consoleErrors.join("\n")).toHaveLength(0);
 });
+
+/** Visible text labels on the timeline that overlap each other or the corner UI. */
+async function overlappingLabels(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const shown = (el: Element) => {
+      for (let n: Element | null = el; n && n !== document.body; n = n.parentElement) {
+        const cs = getComputedStyle(n);
+        if (Number(cs.opacity) < 0.5 || cs.display === "none") return false;
+        const attr = n.getAttribute("opacity");
+        if (attr != null && Number(attr) < 0.3) return false;
+      }
+      return true;
+    };
+    const boxes: { t: string; r: DOMRect; ui?: boolean }[] = [];
+    for (const e of document.querySelectorAll("[data-big],[data-small],[data-name]")) {
+      const r = e.getBoundingClientRect();
+      if (!shown(e) || r.width === 0 || r.right < 0 || r.left > innerWidth) continue;
+      boxes.push({ t: (e.textContent ?? "").trim(), r });
+    }
+    for (const e of document.querySelectorAll("button, .fixed p")) {
+      const r = e.getBoundingClientRect();
+      if (r.top < 80 && r.width > 0) boxes.push({ t: "UI", r, ui: true });
+    }
+    const hits: string[] = [];
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++) {
+        const [a, b] = [boxes[i].r, boxes[j].r];
+        if (boxes[i].ui && boxes[j].ui) continue;
+        if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1)
+          hits.push(`${boxes[i].t} / ${boxes[j].t}`);
+      }
+    return hits;
+  });
+}
+
+for (const viewport of [
+  { width: 1280, height: 720 },
+  { width: 390, height: 844 },
+]) {
+  test(`7. timeline labels never overlap at ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await timelineReady(page);
+    await page.waitForTimeout(1200);
+    expect(await overlappingLabels(page)).toEqual([]);
+    for (const slug of ["impressionism", "cubism", "post-impressionism"]) {
+      await page.evaluate((s) => window.__timeline!.flyToPeriod(s), slug);
+      await page.waitForTimeout(3000);
+      expect(await overlappingLabels(page), slug).toEqual([]);
+    }
+  });
+}
