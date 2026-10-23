@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "seed": "tsx --env-file=.env.local scripts/seed/index.ts",
+    "snapshot": "tsx --env-file=.env.local scripts/export-snapshot.ts",
     "db:push": "drizzle-kit push",
     "qa": "playwright test"
   },
